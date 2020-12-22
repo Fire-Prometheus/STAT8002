@@ -7,9 +7,12 @@ from nltk.corpus import wordnet
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from numpy import mean
 from sklearn import svm
-# nltk.download('punkt')
-# nltk.download('wordnet')
-# nltk.download('stopwords')
+
+nltk.download('punkt')
+nltk.download('wordnet')
+nltk.download('stopwords')
+nltk.download('averaged_perceptron_tagger')
+nltk.download('vader_lexicon')
 from sklearn.model_selection import train_test_split
 
 all_stopwords = nltk.corpus.stopwords.words()
