@@ -74,7 +74,7 @@ def sentiment_analyse(text):
 ##################################################
 csv = pandas.read_csv('agricultural news from 2017.csv')
 # news
-news = csv[csv["timestamp"].between(pandas.to_datetime('2018-01-01'), 1577836799000)]  # timezone is not yet counted
+news = csv[csv["timestamp"].between(1546300800000, 1577836799000)]  # timezone is not yet counted
 news = news[news.tags.str.contains('corn') == True]
 news['timestamp'] = news['timestamp'].apply(lambda t: pandas.Timestamp(t, unit='ms'))
 news['Date'] = news['timestamp'].apply(lambda t: pandas.to_datetime(t, format='%b %d, %Y').date())

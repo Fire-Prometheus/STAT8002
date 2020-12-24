@@ -3,7 +3,6 @@ import re
 import nltk
 import pandas
 from nltk.corpus import wordnet
-from gensim.models import Word2Vec
 
 ##################################################
 # Preparation
@@ -29,7 +28,7 @@ undesired_words.extend(undesired_words_time)
 
 undesired_words_unit = {'length': ['meter', 'm', 'foot', 'ft', 'yard', 'yd', 'centimeter', 'cm', 'inch', 'in',
                                    'kilometer', 'km', 'mile', 'mi'],
-                        'area': ['arce', 'hectare'],
+                        'area': ['acre', 'hectare'],
                         'volume': ['liter', 'litre', 'gallon', 'bushel', 'bsh', 'bu', 'bale'],
                         'temperature': ['°C', '°F'],
                         'mass': ['gram', 'kilogram', 'kg', 'ton', 'tonne', 'quintal', 'pound', 'lb', 'ounce', 'oz',
@@ -103,6 +102,5 @@ news = news[news.tags.str.contains('corn') == True]
 news['timestamp'] = news['timestamp'].apply(lambda t: pandas.Timestamp(t, unit='ms'))
 news['Date'] = news['timestamp'].apply(lambda t: pandas.to_datetime(t, format='%b %d, %Y').date())
 news['new content'] = news['content'].apply(lambda c: preprocess(c))
-
-word_vec = Word2Vec()
-
+news['new headline'] = news['headline'].apply(lambda c: preprocess(c))
+news.to_pickle('preprocessed_news.pickle')
