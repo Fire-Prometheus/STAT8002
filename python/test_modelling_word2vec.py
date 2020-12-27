@@ -8,11 +8,7 @@ from sklearn.model_selection import train_test_split
 
 # read news and price data
 news = pd.read_pickle('preprocessed_news.pickle')
-price = pd.read_csv('US Corn Futures Historical Data.csv')
-price['Vol.'] = price['Vol.'].apply(lambda v: float(v[0:-1]) * 1000 if len(v[0:-1]) >= 1 else np.NaN)
-price['Change %'] = price['Change %'].apply(lambda p: float(p[0:-1]) / 100)
-price['Date'] = price['Date'].apply(lambda d: pd.to_datetime(d, format='%b %d, %Y').date())
-price['direction'] = price['Change %'].apply(lambda change: 0 if change == 0 else (1 if change > 0 else -1))
+price = pd.read_pickle('preprocessed_news.pickle')
 # read google news vectors
 word_vectors = KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin', binary=True)
 

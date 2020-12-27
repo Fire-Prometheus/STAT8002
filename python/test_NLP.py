@@ -1,6 +1,7 @@
 import re
 
 import nltk
+import numpy
 import pandas
 from nltk.corpus import wordnet
 
@@ -104,3 +105,10 @@ news['Date'] = news['timestamp'].apply(lambda t: pandas.to_datetime(t, format='%
 news['new content'] = news['content'].apply(lambda c: preprocess(c))
 news['new headline'] = news['headline'].apply(lambda c: preprocess(c))
 news.to_pickle('preprocessed_news.pickle')
+
+price = pandas.read_csv('US Corn Futures Historical Data.csv')
+price['Vol.'] = price['Vol.'].apply(lambda v: float(v[0:-1]) * 1000 if len(v[0:-1]) >= 1 else numpy.NaN)
+price['Change %'] = price['Change %'].apply(lambda p: float(p[0:-1]) / 100)
+price['Date'] = price['Date'].apply(lambda d: pandas.to_datetime(d, format='%b %d, %Y').date())
+price['direction'] = price['Change %'].apply(lambda change: 0 if change == 0 else (1 if change > 0 else -1))
+price.to_pickle('preprocessed_price.pickle')
