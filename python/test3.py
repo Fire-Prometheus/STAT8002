@@ -49,16 +49,16 @@ def preprocess(text):
     # numeric strings removal
     words = [word for word in words if re.search("\\d", word) is None]
     # synonym replacement
-    processed_index = []
-    words_length = len(words)
-    for i in range(words_length):
-        if i not in processed_index:
-            synonyms = set([w for ln in wordnet.synsets(words[i]) for w in ln.lemma_names()])
-            for j in range(i + 1, words_length):
-                if j not in processed_index and words[j] in synonyms:
-                    words[j] = words[i]
-                    processed_index.append(j)
-            processed_index.append(i)
+    # processed_index = []
+    # words_length = len(words)
+    # for i in range(words_length):
+    #     if i not in processed_index:
+    #         synonyms = set([w for ln in wordnet.synsets(words[i]) for w in ln.lemma_names()])
+    #         for j in range(i + 1, words_length):
+    #             if j not in processed_index and words[j] in synonyms:
+    #                 words[j] = words[i]
+    #                 processed_index.append(j)
+    #         processed_index.append(i)
     # part of speech filtering
     words = filter_part_of_speech(words, ['JJ', 'JJR', 'JJS', 'NNP', 'NNPS', 'VB', 'VBD', 'VBG', 'VBN', 'VBP', 'VBZ'])
     return words
