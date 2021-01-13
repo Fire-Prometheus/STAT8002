@@ -68,9 +68,9 @@ def sentiment_analyse(dataframe):
     return score_map
 
 
-csv = pandas.read_csv('agricultural news from 2017.csv')
+csv = pandas.read_csv('../../data/agricultural news from 2017.csv')
 # historical prices
-prices = pandas.read_csv('US Corn Futures Historical Data.csv')
+prices = pandas.read_csv('../../US Corn Futures Historical Data.csv')
 prices['Vol.'] = prices['Vol.'].apply(
     lambda v: float(v[0:-1]) * 1000 if len(v[0:-1]) >= 1 else numpy.NaN)
 prices['Change %'] = prices['Change %'].apply(lambda p: float(p[0:-1]) / 100)

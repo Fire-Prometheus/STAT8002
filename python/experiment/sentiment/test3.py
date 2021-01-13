@@ -72,16 +72,17 @@ def sentiment_analyse(text):
 ##################################################
 # Load data
 ##################################################
-csv = pandas.read_csv('agricultural news from 2017.csv')
+csv = pandas.read_csv('../../data/agricultural news from 2017.csv')
 # news
-news = csv[csv["timestamp"].between(1546300800000, 1577836799000)]  # timezone is not yet counted
+# news = csv[csv["timestamp"].between(1546300800000, 1577836799000)]  # timezone is not yet counted
+news = csv
 news = news[news.tags.str.contains('corn') == True]
+# news = news[news['content'].str.contains('midday') == False]
 news['timestamp'] = news['timestamp'].apply(lambda t: pandas.Timestamp(t, unit='ms'))
 news['Date'] = news['timestamp'].apply(lambda t: pandas.to_datetime(t, format='%b %d, %Y').date())
 # historical prices
-prices = pandas.read_csv('US Corn Futures Historical Data.csv')
-prices['Vol.'] = prices['Vol.'].apply(
-    lambda v: float(v[0:-1]) * 1000 if len(v[0:-1]) >= 1 else numpy.NaN)
+prices = pandas.read_csv('../../US Corn Futures Historical Data.csv')
+prices['Vol.'] = prices['Vol.'].apply(lambda v: float(v[0:-1]) * 1000 if len(v[0:-1]) >= 1 else numpy.NaN)
 prices['Change %'] = prices['Change %'].apply(lambda p: float(p[0:-1]) / 100)
 prices['Date'] = prices['Date'].apply(lambda d: pandas.to_datetime(d, format='%b %d, %Y').date())
 
@@ -90,7 +91,7 @@ prices['Date'] = prices['Date'].apply(lambda d: pandas.to_datetime(d, format='%b
 ##################################################
 # preprocess
 SCORE_COLUMNS = ['negative', 'neutral', 'positive', 'compound']
-news['new content'] = news['headline'].apply(lambda c: " ".join(preprocess(c)))
+news['new content'] = news['new content'].apply(lambda c: " ".join(preprocess(c)))
 prices['direction'] = prices['Change %'].apply(lambda change: 0 if change == 0 else (1 if change > 0 else -1))
 # analyze
 news[SCORE_COLUMNS] = news.apply(
@@ -101,6 +102,8 @@ result = news.groupby(['Date']).agg(
     {'negative': mean, 'neutral': mean, 'positive': mean, 'compound': mean}).reset_index()
 result = pandas.merge(result, prices, on=['Date'], how='left')
 
+temp = {}
+
 
 def handle_holidays(dataframe):
     result = dataframe.copy()
@@ -109,7 +112,9 @@ def handle_holidays(dataframe):
     for index, row in holidays.iterrows():
         current_date = row['Date']
         next_trade_day = result[result['Date'] > current_date].Date.min()
-        if last_aggregated_trade_day is not None and next_trade_day < last_aggregated_trade_day:
+        if (last_aggregated_trade_day is not None
+                and next_trade_day is not numpy.nan
+                and next_trade_day < last_aggregated_trade_day):
             continue
         else:
             global news
@@ -148,3 +153,5 @@ for delay in DAY_DELAY:
     score = svc.score(X_test, Y_test)
     print(str(delay) + " day(s) delay")
     print(score)
+# data = data[['Date', 'negative', 'neutral', 'positive', 'compound', 'direction']]
+# data.to_pickle('corn_2019.pickle')

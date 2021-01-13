@@ -1,4 +1,5 @@
 import re
+from typing import List
 
 import nltk
 import numpy
@@ -45,11 +46,11 @@ class NewsDataPreprocessor(DataPreprocessor):
         nltk.download('vader_lexicon')
 
     @staticmethod
-    def __get_stopwords() -> list[str]:
+    def __get_stopwords() -> List[str]:
         return nltk.corpus.stopwords.words()
 
     @staticmethod
-    def __get_undesired_words() -> list[str]:
+    def __get_undesired_words() -> List[str]:
         undesired_words = []
         undesired_words_time = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september',
                                 'october',
@@ -71,7 +72,7 @@ class NewsDataPreprocessor(DataPreprocessor):
         undesired_words.extend(list(undesired_words_unit.values()))
         return undesired_words
 
-    def __preprocess(self, text) -> list[str]:
+    def __preprocess(self, text) -> List[str]:
         # cast to lower cases first
         text = text.lower()
         # numeric strings removal
@@ -128,10 +129,11 @@ class PriceDataPreprocessor(DataPreprocessor):
             lambda change: 0 if change == 0 else (1 if change > 0 else -1))
 
 
-grains = ['corn', 'soybean', 'wheat', 'rice', 'oat']
-for g in grains:
-    news_data_preprocessor = NewsDataPreprocessor('agricultural news from 2017.csv', g)
-    news_data_preprocessor.save_as_pickle('preprocessed_news_' + g + '.pickle')
-
-price_data_preprocessor = PriceDataPreprocessor('US Corn Futures Historical Data.csv')
-price_data_preprocessor.save_as_pickle('preprocessed_price.pickle')
+GRAINS = ['CORN', 'SOYBEAN', 'WHEAT', 'RICE', 'OAT']
+PICKLE = {
+    'NEWS': {},
+    'PRICE': {}
+}
+for key, value in PICKLE.items():
+    for grain in GRAINS:
+        value[grain] = '../data/preprocessed_' + key.lower() + '_' + grain.lower() + '.pickle'
