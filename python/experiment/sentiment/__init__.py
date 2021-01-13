@@ -22,9 +22,14 @@ def sentiment_analyse(text: str) -> Dict[str, float]:
 
 
 class SentimentAnalysis(Experiment):
+    grain: str
 
     def __init__(self, grain: str) -> None:
         super().__init__(grain)
+        self.grain = grain
+
+    def __init_subclass__(cls) -> None:
+        super().__init_subclass__()
 
     def __preprocess(self, words: List[str]) -> List[str]:
         words = [lemmatizer.lemmatize(word.strip(), pos='v') for word in words]
@@ -42,6 +47,7 @@ class SentimentAnalysis(Experiment):
         self.combined_df = self.news.groupby(['Date']).agg(
             {'negative': mean, 'neutral': mean, 'positive': mean, 'compound': mean}).reset_index()
         self.combined_df = pd.merge(self.combined_df, self.price, on=['Date'], how='left')
+        self.combined_df = self.combined_df[self.combined_df['direction'].notna()]
 
     def _handle_holiday(self):
         result = self.combined_df.copy()
@@ -69,7 +75,7 @@ class SentimentAnalysis(Experiment):
         global SCORE_COLUMNS
         columns = SCORE_COLUMNS + ['direction']
         result[columns] = result[columns].shift(-trade_day_delay)
-        result = result[result['direction'].notnull()]
+        result = result[result['direction'].notna()]
         return result
 
     def test(self, columns: List[str] = None, trade_day_delay: int = 0) -> None:
