@@ -5,8 +5,10 @@ from gensim.models import KeyedVectors
 from sklearn import svm
 from sklearn.model_selection import train_test_split
 
+from python.experiment import Experiment
 
-class Word2VecModel:
+
+class Word2VecModel(Experiment):
     word_vectors = KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin', binary=True)
     variable_names = ['x' + str(i) for i in range(300)]
 

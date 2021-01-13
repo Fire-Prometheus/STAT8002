@@ -7,5 +7,5 @@ for grain in GRAINS:
     print(grain)
     sentiment_analysis = SentimentAnalysis(grain)
     for delay in DELAY:
-        sentiment_analysis.test(columns=['negative', 'positive', 'neutral'], trade_day_delay=delay)
+        sentiment_analysis.test(columns=['compound'], trade_day_delay=delay)
     print()
