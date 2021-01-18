@@ -1,10 +1,14 @@
 import re
-from typing import List
+from typing import List, Any
 
 import nltk
 import numpy
 import pandas
 from nltk.corpus import wordnet
+from gensim.models.doc2vec import Doc2Vec, TaggedDocument
+from nltk.tokenize import word_tokenize
+from pandas.core.strings import StringMethods
+from sklearn.model_selection import train_test_split
 
 
 class DataPreprocessor:
@@ -21,10 +25,18 @@ class DataPreprocessor:
         return pandas.read_pickle(pickle_path)
 
 
+def download_modules() -> None:
+    nltk.download('punkt')
+    nltk.download('wordnet')
+    nltk.download('stopwords')
+    nltk.download('averaged_perceptron_tagger')
+    nltk.download('vader_lexicon')
+
+
 class NewsDataPreprocessor(DataPreprocessor):
     def __init__(self, csv_path: str, tag: str = None) -> None:
         super().__init__(csv_path)
-        self.__download_modules()
+        download_modules()
         self.stopwords = self.__get_stopwords()
         self.undesired_words = self.__get_undesired_words()
         if tag is not None:
@@ -36,14 +48,6 @@ class NewsDataPreprocessor(DataPreprocessor):
             lambda t: pandas.to_datetime(t, format='%b %d, %Y').date())
         self.data_frame['new content'] = self.data_frame['content'].apply(lambda c: self.__preprocess(c))
         self.data_frame['new headline'] = self.data_frame['headline'].apply(lambda c: self.__preprocess(c))
-
-    @staticmethod
-    def __download_modules() -> None:
-        nltk.download('punkt')
-        nltk.download('wordnet')
-        nltk.download('stopwords')
-        nltk.download('averaged_perceptron_tagger')
-        nltk.download('vader_lexicon')
 
     @staticmethod
     def __get_stopwords() -> List[str]:
@@ -137,3 +141,33 @@ PICKLE = {
 for key, value in PICKLE.items():
     for grain in GRAINS:
         value[grain] = '../data/preprocessed_' + key.lower() + '_' + grain.lower() + '.pickle'
+
+
+class AdvancedDataPreprocessor(DataPreprocessor):
+    def __init__(self, csv_path: str) -> None:
+        super().__init__(csv_path)
+        download_modules()
+        self.data_frame['new tags'] = self.data_frame['tags'].apply(lambda t: self.__transform_tags(t))
+        self.data_frame = self.data_frame[self.data_frame['new tags'].str.len() > 0]
+        documents = [TaggedDocument(words=word_tokenize(row['content']), tags=row['new tags']) for index, row in
+                     self.data_frame.iterrows()]
+        self.train_doc, self.test_doc = train_test_split(documents, test_size=0.33, random_state=42)
+        self.model = Doc2Vec(vector_size=50, min_count=2, epochs=40)
+        self.model.build_vocab(self.train_doc)
+        self.model.train(documents, total_examples=self.model.corpus_count, epochs=self.model.epochs)
+
+    @staticmethod
+    def __transform_tags(tags_list_str: str) -> List[str]:
+        result: List[str] = []
+        if pandas.notna(tags_list_str):
+            for G in GRAINS:
+                g = G.lower()
+                if g in tags_list_str:
+                    result.append(g)
+        return result
+
+    def evaluate(self):
+        total = 0
+        success = 0
+        # for doc in self.test_doc:
+        #     self.model.
