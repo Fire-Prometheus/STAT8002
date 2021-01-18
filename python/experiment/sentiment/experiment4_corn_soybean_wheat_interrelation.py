@@ -1,12 +1,11 @@
 from typing import List
 
+import pandas as pd
 from sklearn import svm
 from sklearn.model_selection import train_test_split
 
-from python.experiment import DELAY, Experiment
+from python.experiment import DELAY
 from python.experiment.sentiment import SentimentAnalysis
-from python.preprocessing import GRAINS
-import pandas as pd
 
 
 class AdvancedSentimentAnalysis:
