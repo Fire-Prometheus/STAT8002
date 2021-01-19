@@ -1,13 +1,13 @@
 import re
-from typing import List, Any
+from typing import List
 
 import nltk
 import numpy
 import pandas
-from nltk.corpus import wordnet
+import swifter
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
+from nltk.corpus import wordnet
 from nltk.tokenize import word_tokenize
-from pandas.core.strings import StringMethods
 from sklearn.model_selection import train_test_split
 
 
@@ -46,8 +46,8 @@ class NewsDataPreprocessor(DataPreprocessor):
             self.data_frame["timestamp"] >= pandas.to_datetime('20170101', format='%Y%m%d')]
         self.data_frame['Date'] = self.data_frame['timestamp'].apply(
             lambda t: pandas.to_datetime(t, format='%b %d, %Y').date())
-        self.data_frame['new content'] = self.data_frame['content'].apply(lambda c: self.__preprocess(c))
-        self.data_frame['new headline'] = self.data_frame['headline'].apply(lambda c: self.__preprocess(c))
+        self.data_frame['new content'] = self.data_frame['content'].swifter.apply(lambda c: self.__preprocess(c))
+        self.data_frame['new headline'] = self.data_frame['headline'].swifter.apply(lambda c: self.__preprocess(c))
 
     @staticmethod
     def __get_stopwords() -> List[str]:
@@ -141,20 +141,20 @@ PICKLE = {
 for key, value in PICKLE.items():
     for grain in GRAINS:
         value[grain] = '../data/preprocessed_' + key.lower() + '_' + grain.lower() + '.pickle'
+PICKLE['NEWS']['ALL'] = '../data/preprocessed_news_all.pickle'
 
 
-class AdvancedDataPreprocessor(DataPreprocessor):
+class AdvancedNewsDataPreprocessor(NewsDataPreprocessor):
     def __init__(self, csv_path: str) -> None:
         super().__init__(csv_path)
-        download_modules()
-        self.data_frame['new tags'] = self.data_frame['tags'].apply(lambda t: self.__transform_tags(t))
-        self.data_frame = self.data_frame[self.data_frame['new tags'].str.len() > 0]
-        documents = [TaggedDocument(words=word_tokenize(row['content']), tags=row['new tags']) for index, row in
-                     self.data_frame.iterrows()]
-        self.train_doc, self.test_doc = train_test_split(documents, test_size=0.33, random_state=42)
-        self.model = Doc2Vec(vector_size=50, min_count=2, epochs=40)
-        self.model.build_vocab(self.train_doc)
-        self.model.train(documents, total_examples=self.model.corpus_count, epochs=self.model.epochs)
+        # self.data_frame['new tags'] = self.data_frame['tags'].apply(lambda t: self.__transform_tags(t))
+        # self.data_frame = self.data_frame[self.data_frame['new tags'].str.len() > 0]
+        # documents = [TaggedDocument(words=word_tokenize(row['content']), tags=row['new tags']) for index, row in
+        #              self.data_frame.iterrows()]
+        # self.train_doc, self.test_doc = train_test_split(documents, test_size=0.33, random_state=42)
+        # self.model = Doc2Vec(vector_size=50, min_count=2, epochs=40)
+        # self.model.build_vocab(self.train_doc)
+        # self.model.train(documents, total_examples=self.model.corpus_count, epochs=self.model.epochs)
 
     @staticmethod
     def __transform_tags(tags_list_str: str) -> List[str]:
@@ -171,3 +171,10 @@ class AdvancedDataPreprocessor(DataPreprocessor):
         success = 0
         # for doc in self.test_doc:
         #     self.model.
+
+    @staticmethod
+    def load_pickle_with_filter(pickle_path: str, grain: str) -> pandas.DataFrame:
+        pickle = DataPreprocessor.load_pickle(pickle_path)
+        if grain is not None:
+            pickle = pickle[pickle['new tags'].str.contains(grain) == True]
+        return pickle

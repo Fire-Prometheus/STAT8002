@@ -12,9 +12,8 @@ class Word2VecModel(Experiment):
     word_vectors = KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin', binary=True)
     variable_names = ['x' + str(i) for i in range(300)]
 
-    def __init__(self, news_pickle_path: str, price_pickle_path: str) -> None:
-        self.news = pd.read_pickle(news_pickle_path)
-        self.price = pd.read_pickle(price_pickle_path)
+    def __init__(self, grain: str) -> None:
+        super().__init__(grain)
         self.combined_df = pd.DataFrame(self.news[['Date', 'new content']])
         self.combined_df[self.variable_names] = self.combined_df['new content'].apply(
             lambda c: pd.Series(self.__sum_of_vectors_from_words(c)))

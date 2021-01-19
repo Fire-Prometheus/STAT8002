@@ -1,0 +1,3 @@
+from python.experiment.sentiment import default_test, ExtendedSentimentAnalysis
+
+default_test(ExtendedSentimentAnalysis)

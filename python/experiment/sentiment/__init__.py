@@ -7,7 +7,8 @@ from nltk.stem import WordNetLemmatizer
 from sklearn import svm
 from sklearn.model_selection import train_test_split
 
-from python.experiment import Experiment
+from python.experiment import Experiment, DELAY
+from python.preprocessing import GRAINS
 
 SCORE_COLUMNS = ['negative', 'neutral', 'positive', 'compound']
 
@@ -24,14 +25,15 @@ def sentiment_analyse(text: str) -> Dict[str, float]:
 class SentimentAnalysis(Experiment):
     grain: str
 
-    def __init__(self, grain: str) -> None:
-        super().__init__(grain)
+    def __init__(self, grain: str, all_data: bool = False) -> None:
+        super().__init__(grain, all_data)
         self.grain = grain
 
     def __init_subclass__(cls) -> None:
         super().__init_subclass__()
 
-    def __preprocess(self, words: List[str]) -> List[str]:
+    @staticmethod
+    def __preprocess(words: List[str]) -> List[str]:
         words = [lemmatizer.lemmatize(word.strip(), pos='v') for word in words]
         words = [lemmatizer.lemmatize(word.strip(), pos='a') for word in words]
         words = [lemmatizer.lemmatize(word.strip(), pos='n') for word in words]
@@ -90,3 +92,18 @@ class SentimentAnalysis(Experiment):
         score = svc.score(x_test, y_test)
         print(str(trade_day_delay) + " day(s) delay")
         print(score)
+
+
+class ExtendedSentimentAnalysis(SentimentAnalysis):
+    def __init__(self, grain: str) -> None:
+        super().__init__(grain, True)
+
+
+def default_test(cls: type, columns: List[str] = None):
+    for grain in GRAINS:
+        print('====================')
+        print(grain)
+        sentiment_analysis = cls(grain)
+        for delay in DELAY:
+            sentiment_analysis.test(columns=columns, trade_day_delay=delay)
+        print()

@@ -1,6 +1,6 @@
 import pandas as pd
 
-from python.preprocessing import DataPreprocessor, PICKLE
+from python.preprocessing import DataPreprocessor, PICKLE, AdvancedNewsDataPreprocessor
 
 DELAY = [0, 1, 2, 3, 5, 7, 14, 30]
 
@@ -10,8 +10,10 @@ class Experiment:
     price: pd.DataFrame
     combined_df: pd.DataFrame
 
-    def __init__(self, grain: str) -> None:
-        self.news = DataPreprocessor.load_pickle('../' + PICKLE['NEWS'][grain.upper()])
+    def __init__(self, grain: str, all_data: bool = None) -> None:
+        self.news = AdvancedNewsDataPreprocessor.load_pickle_with_filter(
+            '../' + PICKLE['NEWS']['ALL'], grain) if all_data else DataPreprocessor.load_pickle(
+            '../' + PICKLE['NEWS'][grain.upper()])
         self.price = DataPreprocessor.load_pickle('../' + PICKLE['PRICE'][grain.upper()])
         self._process_news()
         self._combine()
