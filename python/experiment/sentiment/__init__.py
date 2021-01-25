@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 from python.experiment import Experiment, DELAY
 from python.preprocessing import GRAINS
 
-SCORE_COLUMNS = ['negative', 'neutral', 'positive', 'compound']
+SCORE_COLUMNS = ['positive', 'negative', 'neutral', 'compound']
 
 analyzer = SentimentIntensityAnalyzer()
 mean = np.mean
@@ -22,15 +22,45 @@ def sentiment_analyse(text: str) -> Dict[str, float]:
     return analyzer.polarity_scores(text)
 
 
+class SentimentScoring:
+    def compute_scores(self, text: str) -> pd.Series:
+        """
+        This function computes the scores, at least scores of its positivity and negativity.
+        It's ab abstraction of data type returned by NLTK Vader.
+        :param text: a word/phrase
+        :return: a dict with keys: 'positive', 'negative', 'neutral' and 'compound'
+        """
+        return pd.Series(
+            {
+                'positive': 0.0,
+                'negative': 0.0,
+                'neutral': 0.0,
+                'compound': 0.0
+            }
+        )
+
+
+class VaderSentimentScoring(SentimentScoring):
+    analyzer = SentimentIntensityAnalyzer()
+
+    def compute_scores(self, text: str) -> pd.Series:
+        scores = analyzer.polarity_scores(text)
+        compute_scores = super().compute_scores(text)
+        compute_scores.at['positive'] = scores['pos']
+        compute_scores.at['negative'] = scores['neg']
+        compute_scores.at['neutral'] = scores['neu']
+        compute_scores.at['compound'] = scores['compound']
+        return compute_scores
+
+
 class SentimentAnalysis(Experiment):
     grain: str
+    sentiment_scoring: SentimentScoring
 
-    def __init__(self, grain: str, all_data: bool = False) -> None:
+    def __init__(self, sentiment_scoring: SentimentScoring, grain: str, all_data: bool = False) -> None:
         super().__init__(grain, all_data)
+        self.sentiment_scoring = sentiment_scoring
         self.grain = grain
-
-    def __init_subclass__(cls) -> None:
-        super().__init_subclass__()
 
     @staticmethod
     def __preprocess(words: List[str]) -> List[str]:
@@ -41,8 +71,9 @@ class SentimentAnalysis(Experiment):
 
     def _process_news(self):
         self.news['new content'] = self.news['new content'].apply(lambda c: " ".join(self.__preprocess(c)))
-        self.news[SCORE_COLUMNS] = self.news.apply(
-            lambda row: pd.Series(list(sentiment_analyse(row['new content']).values())), axis='columns')
+        self.news = pd.merge(self.news,
+                             self.news['new content'].apply(lambda c: self.sentiment_scoring.compute_scores(c)),
+                             left_index=True, right_index=True)
 
     def _combine(self):
 
@@ -93,17 +124,15 @@ class SentimentAnalysis(Experiment):
         print(str(trade_day_delay) + " day(s) delay")
         print(score)
 
+    class ExtendedSentimentAnalysis(SentimentAnalysis):
+        def __init__(self, grain: str) -> None:
+            super().__init__(grain, True)
 
-class ExtendedSentimentAnalysis(SentimentAnalysis):
-    def __init__(self, grain: str) -> None:
-        super().__init__(grain, True)
-
-
-def default_test(cls: type, columns: List[str] = None):
-    for grain in GRAINS:
-        print('====================')
-        print(grain)
-        sentiment_analysis = cls(grain)
-        for delay in DELAY:
-            sentiment_analysis.test(columns=columns, trade_day_delay=delay)
-        print()
+    def default_test(cls: type, columns: List[str] = None):
+        for grain in GRAINS:
+            print('====================')
+            print(grain)
+            sentiment_analysis = cls(grain)
+            for delay in DELAY:
+                sentiment_analysis.test(columns=columns, trade_day_delay=delay)
+            print()
