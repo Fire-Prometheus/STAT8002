@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Union, Iterable
 
 import numpy as np
 import pandas as pd
@@ -39,6 +39,9 @@ class SentimentScoring:
             }
         )
 
+    def aggregate_scores(self, scores: Union[Iterable, float]) -> np.ndarray:
+        return np.mean(scores)
+
 
 class VaderSentimentScoring(SentimentScoring):
     analyzer = SentimentIntensityAnalyzer()
@@ -76,9 +79,15 @@ class SentimentAnalysis(Experiment):
                              left_index=True, right_index=True)
 
     def _combine(self):
-
+        aggregate_scores = self.sentiment_scoring.aggregate_scores
         self.combined_df = self.news.groupby(['Date']).agg(
-            {'negative': mean, 'neutral': mean, 'positive': mean, 'compound': mean}).reset_index()
+            {
+                'negative': aggregate_scores,
+                'neutral': aggregate_scores,
+                'positive': aggregate_scores,
+                'compound': aggregate_scores
+            }
+        ).reset_index()
         self.combined_df = pd.merge(self.combined_df, self.price, on=['Date'], how='left')
         self.combined_df = self.combined_df[self.combined_df['direction'].notna()]
 
@@ -124,15 +133,17 @@ class SentimentAnalysis(Experiment):
         print(str(trade_day_delay) + " day(s) delay")
         print(score)
 
-    class ExtendedSentimentAnalysis(SentimentAnalysis):
-        def __init__(self, grain: str) -> None:
-            super().__init__(grain, True)
 
-    def default_test(cls: type, columns: List[str] = None):
-        for grain in GRAINS:
-            print('====================')
-            print(grain)
-            sentiment_analysis = cls(grain)
-            for delay in DELAY:
-                sentiment_analysis.test(columns=columns, trade_day_delay=delay)
-            print()
+class ExtendedSentimentAnalysis(SentimentAnalysis):
+    def __init__(self, grain: str) -> None:
+        super().__init__(grain, True)
+
+
+def default_test(cls: type, columns: List[str] = None):
+    for grain in GRAINS:
+        print('====================')
+        print(grain)
+        sentiment_analysis = cls(grain)
+        for delay in DELAY:
+            sentiment_analysis.test(columns=columns, trade_day_delay=delay)
+        print()
