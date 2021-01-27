@@ -6,6 +6,9 @@ from nltk.sentiment import SentimentIntensityAnalyzer
 from nltk.stem import WordNetLemmatizer
 from sklearn import svm
 from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.svm import SVR
+import matplotlib.pyplot as plt
 
 from python.experiment import Experiment, DELAY
 from python.preprocessing import GRAINS
@@ -61,9 +64,9 @@ class SentimentAnalysis(Experiment):
     sentiment_scoring: SentimentScoring
 
     def __init__(self, sentiment_scoring: SentimentScoring, grain: str, all_data: bool = False) -> None:
-        super().__init__(grain, all_data)
         self.sentiment_scoring = sentiment_scoring
         self.grain = grain
+        super().__init__(grain, all_data)
 
     @staticmethod
     def __preprocess(words: List[str]) -> List[str]:
@@ -120,7 +123,7 @@ class SentimentAnalysis(Experiment):
         result = result[result['direction'].notna()]
         return result
 
-    def test(self, columns: List[str] = None, trade_day_delay: int = 0) -> None:
+    def test(self, columns: List[str] = None, trade_day_delay: int = 0, to_pickle: bool = False) -> None:
         if columns is None:
             columns = ['negative', 'positive']
         data = self.apply_delay(trade_day_delay)
@@ -132,18 +135,44 @@ class SentimentAnalysis(Experiment):
         score = svc.score(x_test, y_test)
         print(str(trade_day_delay) + " day(s) delay")
         print(score)
+        if to_pickle:
+            data.to_pickle('./data_' + self.grain + '_delay' + str(trade_day_delay) + '.pickle')
+
+    def fit_linear(self, columns: List[str] = None, trade_day_delay: int = 0) -> None:
+        if columns is None:
+            columns = ['negative', 'positive']
+        data = self.apply_delay(trade_day_delay)
+        x = data[columns]
+        y = data['Change %']
+        reg = LinearRegression()
+        reg = reg.fit(x, y)
+        score = reg.score(x, y)
+        print(str(trade_day_delay) + " day(s) delay")
+        print(score)
+
+    def svr(self, columns: List[str] = None, trade_day_delay: int = 0) -> None:
+        if columns is None:
+            columns = ['negative', 'positive']
+        data = self.apply_delay(trade_day_delay)
+        x = data[columns]
+        y = data['Change %']
+        svr = SVR(kernel='poly', C=1e3, degree=3)
+        svr.fit(x, y)
+        score = svr.score(x, y)
+        print(str(trade_day_delay) + " day(s) delay")
+        print(score)
 
 
 class ExtendedSentimentAnalysis(SentimentAnalysis):
-    def __init__(self, grain: str) -> None:
-        super().__init__(grain, True)
+    def __init__(self, sentiment_scoring: SentimentScoring, grain: str) -> None:
+        super().__init__(sentiment_scoring, grain, True)
 
 
-def default_test(cls: type, columns: List[str] = None):
+def default_test(cls: type, sentiment_scoring_cls: type, columns: List[str] = None):
     for grain in GRAINS:
         print('====================')
         print(grain)
-        sentiment_analysis = cls(grain)
+        sentiment_analysis = cls(sentiment_scoring_cls(), grain)
         for delay in DELAY:
             sentiment_analysis.test(columns=columns, trade_day_delay=delay)
         print()

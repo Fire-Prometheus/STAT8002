@@ -25,8 +25,8 @@ imp_country = pandas.read_excel(file_path+'import_country.xlsx', engine='openpyx
 
 # =====================================================================================================================
 country = set()
-country.update(set(exp_country['Corn']))
-country.update(set(imp_country['Corn']))
+country.update(set(exp_country['Wheat']))
+country.update(set(imp_country['Wheat']))
 print(country)
 EU_28 = ['Austria','Belgium','Bulgaria','Croatia','Cyprus','Denmark','Estonia','Finland',
          'France','Germany','Greece','Hungary','Ireland','Italy','Latvia','Lithuania',
