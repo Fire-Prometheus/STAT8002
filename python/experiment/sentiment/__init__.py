@@ -1,14 +1,15 @@
-from typing import Dict, List, Union, Iterable
+from typing import Dict, List, Union, Iterable, Tuple, Optional
 
+import nltk
 import numpy as np
 import pandas as pd
+from nltk.corpus import sentiwordnet, SentiSynset
 from nltk.sentiment import SentimentIntensityAnalyzer
 from nltk.stem import WordNetLemmatizer
 from sklearn import svm
-from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
 from sklearn.svm import SVR
-import matplotlib.pyplot as plt
 
 from python.experiment import Experiment, DELAY
 from python.preprocessing import GRAINS
@@ -26,7 +27,7 @@ def sentiment_analyse(text: str) -> Dict[str, float]:
 
 
 class SentimentScoring:
-    def compute_scores(self, text: str) -> pd.Series:
+    def compute_scores(self, text: List[str]) -> pd.Series:
         """
         This function computes the scores, at least scores of its positivity and negativity.
         It's ab abstraction of data type returned by NLTK Vader.
@@ -47,16 +48,66 @@ class SentimentScoring:
 
 
 class VaderSentimentScoring(SentimentScoring):
-    analyzer = SentimentIntensityAnalyzer()
+    analyzer: SentimentIntensityAnalyzer = SentimentIntensityAnalyzer()
 
-    def compute_scores(self, text: str) -> pd.Series:
-        scores = analyzer.polarity_scores(text)
+    def compute_scores(self, text: List[str]) -> pd.Series:
+        scores = analyzer.polarity_scores(" ".join(text))
         compute_scores = super().compute_scores(text)
         compute_scores.at['positive'] = scores['pos']
         compute_scores.at['negative'] = scores['neg']
         compute_scores.at['neutral'] = scores['neu']
         compute_scores.at['compound'] = scores['compound']
         return compute_scores
+
+
+class SentiWordNetScoring(SentimentScoring):
+    def compute_scores(self, text: List[str]) -> pd.Series:
+        pos_tags = nltk.pos_tag(text)
+        polarity_scores = {
+            'positive': [],
+            'negative': [],
+            'objective': []
+        }
+        for pos_tag in pos_tags:
+            senti = self.__find_senti(pos_tag)
+            if self.__is_senti_suitable(senti):
+                polarity_scores['positive'] += senti.pos_score()
+                polarity_scores['negative'] += senti.neg_score()
+                polarity_scores['objective'] += senti.obj_score()
+        compute_scores = super().compute_scores(text)
+        compute_scores.at['positive'] = self._aggregate_polarities(polarity_scores['positive'])
+        compute_scores.at['negative'] = self._aggregate_polarities(polarity_scores['negative'])
+        compute_scores.append(pd.Series({'objective': self._aggregate_polarities(polarity_scores['objective'])}))
+        return compute_scores
+
+    def __find_senti(self, pos_tuple: Tuple[str, str]) -> Optional[SentiSynset]:
+        convert_pos = self.__convert_pos(pos_tuple[1])
+        senti_wordnet: sentiwordnet = sentiwordnet()
+        syn_sets = senti_wordnet.synsets(pos_tuple[0], convert_pos)
+        try:
+            return next(syn_sets)
+        except StopIteration:
+            return None
+
+    @staticmethod
+    def __is_senti_suitable(senti: SentiSynset):
+        return senti is not None and senti.neg_score() > 0.0 and senti.pos_score() > 0.0
+
+    @staticmethod
+    def __convert_pos(text: str):
+        if text.startswith('J'):
+            return 'a'
+        elif text.startswith('N'):
+            return 'n'
+        elif text.startswith('R'):
+            return 'r'
+        elif text.startswith('V'):
+            return 'v'
+        raise NotImplementedError
+
+    @staticmethod
+    def _aggregate_polarities(polarities: List[float]):
+        return np.mean(polarities)
 
 
 class SentimentAnalysis(Experiment):
@@ -76,10 +127,12 @@ class SentimentAnalysis(Experiment):
         return words
 
     def _process_news(self):
-        self.news['new content'] = self.news['new content'].apply(lambda c: " ".join(self.__preprocess(c)))
-        self.news = pd.merge(self.news,
-                             self.news['new content'].apply(lambda c: self.sentiment_scoring.compute_scores(c)),
-                             left_index=True, right_index=True)
+        self.news = pd.merge(
+            self.news,
+            self.news['new content'].apply(lambda c: self.sentiment_scoring.compute_scores(c)),
+            left_index=True,
+            right_index=True
+        )
 
     def _combine(self):
         aggregate_scores = self.sentiment_scoring.aggregate_scores

@@ -31,6 +31,7 @@ def download_modules() -> None:
     nltk.download('stopwords')
     nltk.download('averaged_perceptron_tagger')
     nltk.download('vader_lexicon')
+    nltk.download('sentiwordnet')
 
 
 class NewsDataPreprocessor(DataPreprocessor):

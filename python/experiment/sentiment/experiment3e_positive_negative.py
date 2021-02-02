@@ -87,7 +87,7 @@ if is_jun:
 else:
     temp = pd.merge(price, my_data, on='Date')
     X = temp[test_name].shift(-trade_day_delay).dropna().to_numpy()
-    Y = temp['Price_US Corn'][0:-1]
+    Y = temp['Price_Oats'][0:-1]
 
 predict_data, X_test, target, y_test = train_test_split(X, Y, test_size=0.4, random_state=540)
 
