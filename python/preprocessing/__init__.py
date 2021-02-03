@@ -135,6 +135,7 @@ class PriceDataPreprocessor(DataPreprocessor):
 
 
 GRAINS = ['CORN', 'SOYBEAN', 'WHEAT', 'RICE', 'OAT']
+# GRAINS = ['OAT']
 PICKLE = {
     'NEWS': {},
     'PRICE': {}
@@ -142,7 +143,7 @@ PICKLE = {
 for key, value in PICKLE.items():
     for grain in GRAINS:
         value[grain] = '../data/preprocessed_' + key.lower() + '_' + grain.lower() + '.pickle'
-PICKLE['NEWS']['ALL'] = '../data/preprocessed_news_all.pickle'
+PICKLE['NEWS']['ALL'] = '../data/preprocessed_news_all_new_tags.pickle'
 
 
 class AdvancedNewsDataPreprocessor(NewsDataPreprocessor):

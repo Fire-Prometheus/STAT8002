@@ -36,15 +36,15 @@ class SentimentScoring:
         """
         return pd.Series(
             {
-                'positive': 0.0,
-                'negative': 0.0,
-                'neutral': 0.0,
-                'compound': 0.0
+                'positive': np.nan,
+                'negative': np.nan,
+                'neutral': np.nan,
+                'compound': np.nan
             }
         )
 
     def aggregate_scores(self, scores: Union[Iterable, float]) -> np.ndarray:
-        return np.mean(scores)
+        return np.nan if scores is None or len(scores) == 0 else np.mean(scores)
 
 
 class VaderSentimentScoring(SentimentScoring):
@@ -68,25 +68,29 @@ class SentiWordNetScoring(SentimentScoring):
             'negative': [],
             'objective': []
         }
+        filtered_words: List[str] = []
         for pos_tag in pos_tags:
             senti = self.__find_senti(pos_tag)
             if self.__is_senti_suitable(senti):
-                polarity_scores['positive'] += senti.pos_score()
-                polarity_scores['negative'] += senti.neg_score()
-                polarity_scores['objective'] += senti.obj_score()
+                polarity_scores['positive'].append(senti.pos_score())
+                polarity_scores['negative'].append(senti.neg_score())
+                polarity_scores['objective'].append(senti.obj_score())
+                filtered_words.append(pos_tag[0])
         compute_scores = super().compute_scores(text)
+        if len(polarity_scores['positive']) == 0:
+            return compute_scores.append(pd.Series({'objective': np.nan, 'filtered words': np.nan}))
         compute_scores.at['positive'] = self._aggregate_polarities(polarity_scores['positive'])
         compute_scores.at['negative'] = self._aggregate_polarities(polarity_scores['negative'])
         compute_scores.append(pd.Series({'objective': self._aggregate_polarities(polarity_scores['objective'])}))
+        compute_scores.append(pd.Series({'filtered words': filtered_words}))
         return compute_scores
 
     def __find_senti(self, pos_tuple: Tuple[str, str]) -> Optional[SentiSynset]:
-        convert_pos = self.__convert_pos(pos_tuple[1])
-        senti_wordnet: sentiwordnet = sentiwordnet()
-        syn_sets = senti_wordnet.synsets(pos_tuple[0], convert_pos)
         try:
+            convert_pos = self.__convert_pos(pos_tuple[1])
+            syn_sets = sentiwordnet.senti_synsets(pos_tuple[0], convert_pos)
             return next(syn_sets)
-        except StopIteration:
+        except (StopIteration, NotImplementedError):
             return None
 
     @staticmethod
@@ -180,6 +184,7 @@ class SentimentAnalysis(Experiment):
         if columns is None:
             columns = ['negative', 'positive']
         data = self.apply_delay(trade_day_delay)
+        data = data[data['positive'].notna()]
         x = data[columns]
         y = data['direction']
         x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.33, random_state=42)
@@ -227,5 +232,5 @@ def default_test(cls: type, sentiment_scoring_cls: type, columns: List[str] = No
         print(grain)
         sentiment_analysis = cls(sentiment_scoring_cls(), grain)
         for delay in DELAY:
-            sentiment_analysis.test(columns=columns, trade_day_delay=delay)
+            sentiment_analysis.test(columns=columns, trade_day_delay=delay, to_pickle=True)
         print()

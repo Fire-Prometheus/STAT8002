@@ -1,3 +1,4 @@
-from python.experiment.sentiment import default_test, ExtendedSentimentAnalysis, VaderSentimentScoring
+from python.experiment.sentiment import default_test, ExtendedSentimentAnalysis, VaderSentimentScoring, \
+    SentiWordNetScoring
 
-default_test(ExtendedSentimentAnalysis, VaderSentimentScoring)
+default_test(ExtendedSentimentAnalysis, SentiWordNetScoring)
