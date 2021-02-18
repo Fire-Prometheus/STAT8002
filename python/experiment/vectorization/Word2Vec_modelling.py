@@ -9,7 +9,7 @@ from python.experiment import Experiment
 
 
 class Word2VecModel(Experiment):
-    word_vectors = KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin', binary=True)
+    word_vectors = KeyedVectors.load_word2vec_format('/media/alextwy/Plextor/Documents/Academic/#STAT#8002/src/python/experiment/vectorization/GoogleNews-vectors-negative300.bin', binary=True)
     variable_names = ['x' + str(i) for i in range(300)]
 
     def __init__(self, grain: str) -> None:
@@ -76,3 +76,7 @@ class Word2VecModel(Experiment):
         DAY_DELAY = [0, 1, 2, 5, 7, 14, 30]
         for delay in DAY_DELAY:
             self.test(delay)
+
+
+model = Word2VecModel('CORN')
+model.test(1)
