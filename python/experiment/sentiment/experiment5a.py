@@ -6,6 +6,8 @@ import pandas as pd
 from python.experiment import Experiment
 from collections import Counter
 
+from python.preprocessing import GRAINS
+
 
 class MyExperiment(Experiment):
     POLARITY = {
@@ -58,8 +60,8 @@ class MyExperiment(Experiment):
         self.table_neutral = self.table.sort_values('neutral', ascending=False)
 
 
-if __name__ == '__main':
-    grain = 'WHEAT'
-    print(grain)
-    experiment = MyExperiment(grain)
-    experiment.test(1)
+if __name__ == '__main__':
+    for grain in GRAINS:
+        print(grain)
+        experiment = MyExperiment(grain)
+        experiment.test(1)

@@ -9,7 +9,8 @@ from python.experiment import Experiment
 
 
 class Word2VecModel(Experiment):
-    word_vectors = KeyedVectors.load_word2vec_format('/media/alextwy/Plextor/Documents/Academic/#STAT#8002/src/python/experiment/vectorization/GoogleNews-vectors-negative300.bin', binary=True)
+    # word_vectors = KeyedVectors.load_word2vec_format('/media/alextwy/Plextor/Documents/Academic/#STAT#8002/src/python/experiment/vectorization/GoogleNews-vectors-negative300.bin', binary=True)
+    word_vectors = KeyedVectors.load_word2vec_format('../../data/word2vec.model', binary=True)
     variable_names = ['x' + str(i) for i in range(300)]
 
     def __init__(self, grain: str) -> None:

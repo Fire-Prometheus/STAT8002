@@ -7,6 +7,8 @@ from python.experiment import Experiment
 from collections import Counter
 from sklearn.model_selection import train_test_split
 
+from python.preprocessing import GRAINS
+
 
 class MyExperiment(Experiment):
     POLARITY = {
@@ -59,7 +61,8 @@ class MyExperiment(Experiment):
         self.table_neutral = self.table.sort_values('neutral', ascending=False)
 
 
-grain = 'WHEAT'
-print(grain)
-experiment = MyExperiment(grain)
-experiment.test(1)
+if __name__ == '__main__':
+    for grain in GRAINS:
+        print(grain)
+        experiment = MyExperiment(grain)
+        experiment.test(1)

@@ -1,14 +1,16 @@
 import re
-from typing import List
+from typing import List, Tuple, Set
 
 import nltk
 import numpy
 import pandas
+import pandas as pd
 import swifter
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 from nltk.corpus import wordnet
 from nltk.tokenize import word_tokenize
 from sklearn.model_selection import train_test_split
+import operator
 
 
 class DataPreprocessor:
@@ -42,10 +44,11 @@ class NewsDataPreprocessor(DataPreprocessor):
         self.undesired_words = self.__get_undesired_words()
         if tag is not None:
             self.data_frame = self.data_frame[self.data_frame.tags.str.contains(tag) == True]
-        self.data_frame['timestamp'] = self.data_frame['timestamp'].apply(lambda t: pandas.Timestamp(t, unit='ms'))
+        self.data_frame['timestamp'] = self.data_frame['timestamp'].swifter.apply(
+            lambda t: pandas.Timestamp(t, unit='ms'))
         self.data_frame = self.data_frame[
             self.data_frame["timestamp"] >= pandas.to_datetime('20170101', format='%Y%m%d')]
-        self.data_frame['Date'] = self.data_frame['timestamp'].apply(
+        self.data_frame['Date'] = self.data_frame['timestamp'].swifter.apply(
             lambda t: pandas.to_datetime(t, format='%b %d, %Y').date())
         self.data_frame['new content'] = self.data_frame['content'].swifter.apply(lambda c: self.__preprocess(c))
         self.data_frame['new headline'] = self.data_frame['headline'].swifter.apply(lambda c: self.__preprocess(c))
@@ -143,20 +146,51 @@ PICKLE = {
 for key, value in PICKLE.items():
     for grain in GRAINS:
         value[grain] = '../data/preprocessed_' + key.lower() + '_' + grain.lower() + '.pickle'
-PICKLE['NEWS']['ALL'] = '../data/preprocessed_news_all_new_tags.pickle'
+PICKLE['NEWS']['ALL'] = '../data/preprocessed_all_new_tags_content.pickle'
 
 
 class AdvancedNewsDataPreprocessor(NewsDataPreprocessor):
-    def __init__(self, csv_path: str) -> None:
-        super().__init__(csv_path)
-        # self.data_frame['new tags'] = self.data_frame['tags'].apply(lambda t: self.__transform_tags(t))
-        # self.data_frame = self.data_frame[self.data_frame['new tags'].str.len() > 0]
-        # documents = [TaggedDocument(words=word_tokenize(row['content']), tags=row['new tags']) for index, row in
-        #              self.data_frame.iterrows()]
-        # self.train_doc, self.test_doc = train_test_split(documents, test_size=0.33, random_state=42)
-        # self.model = Doc2Vec(vector_size=50, min_count=2, epochs=40)
-        # self.model.build_vocab(self.train_doc)
-        # self.model.train(documents, total_examples=self.model.corpus_count, epochs=self.model.epochs)
+    MY_GRAINS = list(map(lambda g: g.lower(), GRAINS))
+    MY_GRAINS.append('soy')
+
+    def __init__(self, pickle_path: str) -> None:
+        self.data_frame = pd.read_pickle(pickle_path)
+        print("Loading data...")
+        self.data_frame['new tags'] = self.data_frame['tags'].swifter.apply(lambda t: self.__transform_tags(t))
+        temp_df = self.data_frame[self.data_frame['new tags'].str.len() > 0]
+        documents = [TaggedDocument(words=row['new content'], tags=row['new tags']) for index, row in
+                     temp_df.iterrows()]
+        self.train_doc, self.test_doc = train_test_split(documents, test_size=0.33, random_state=42)
+        self.model = Doc2Vec(vector_size=50, min_count=2, epochs=40)
+        self.model.build_vocab(self.train_doc)
+        print("Training model")
+        self.model.train(documents, total_examples=self.model.corpus_count, epochs=self.model.epochs)
+        print("Trained model")
+        self.model.save('../data/doc2vec_content.model')
+        print("Saved model")
+        self.data_frame.to_pickle('../data/preprocessed_news_all_new_tags.pickle')
+        # print("Predicting tags")
+        # no_tags_df = self.data_frame[len(self.data_frame['new tags']) == 0]
+        # no_tags_df['new tags'] = no_tags_df['new content'].swifter.apply(
+        #     lambda new_content: self.__predict_topics(new_content))
+        # self.data_frame[len(self.data_frame['new tags']) == 0] = no_tags_df['new tags']
+
+    def test(self):
+        print("Start")
+        self.data_frame['new tags'] = self.data_frame.swifter.apply(
+            lambda row: row['new tags'] if len(row['new tags']) == 0 else self.predict_topics(row['new headline']),
+            axis=1)
+        print("End")
+
+    def predict_topics(self, content: List[str]) -> List[str]:
+        existing_grains: Set[str] = set(filter(lambda g: g in content, self.MY_GRAINS))
+        if len(existing_grains) == 0:
+            return []
+        infer_vector = self.model.infer_vector(content)
+        most_similar: List[Tuple[str, float]] = self.model.docvecs.most_similar([infer_vector])
+        most_similar = list(filter(lambda t: operator.itemgetter(1)(t) > 0, most_similar))
+        most_similar_topics: Set[str] = set(map(lambda t: operator.itemgetter(0)(t), most_similar))
+        return list(most_similar_topics.intersection(existing_grains))
 
     @staticmethod
     def __transform_tags(tags_list_str: str) -> List[str]:
@@ -178,5 +212,5 @@ class AdvancedNewsDataPreprocessor(NewsDataPreprocessor):
     def load_pickle_with_filter(pickle_path: str, grain: str) -> pandas.DataFrame:
         pickle = DataPreprocessor.load_pickle(pickle_path)
         if grain is not None:
-            pickle = pickle[pickle['new tags'].str.contains(grain) == True]
+            pickle = pickle[pickle['new tags'].apply(lambda new_tags: grain.lower() in new_tags)]
         return pickle

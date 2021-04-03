@@ -63,7 +63,11 @@ Soybean = np.array(price['Price_US Soybeans'])
 Cattle = np.array(price['Price_Live Cattle'])
 Oil = np.array(price['Price_Crude Oil WTI'])
 Pig = np.array(price['Price_Lean Hogs'])
+
+grain = 'WHEAT'
+trade_day_delay = 1
 is_jun = False
+
 if is_jun:
     test_name = ['Price_US Wheat', 'Price_Oats', 'Price_Rough Rice', 'Price_US Corn',
                  'Price_US Soybeans', 'Price_Live Cattle', 'Price_Crude Oil WTI', 'Price_Lean Hogs']
@@ -72,22 +76,50 @@ else:
                  'Price_US Soybeans', 'Price_Live Cattle', 'Price_Crude Oil WTI', 'Price_Lean Hogs',
                  'negative', 'positive']
 
-grain = 'OAT'
-trade_day_delay = 1
-
 filename = 'data_' + grain + '_delay' + str(trade_day_delay) + '.pickle'
-if not path.exists(filename):
-    analysis = SentimentAnalysis(VaderSentimentScoring(), grain)
-    analysis.test(trade_day_delay=trade_day_delay, to_pickle=True)
+# if not path.exists(filename):
+analysis = SentimentAnalysis(VaderSentimentScoring(), grain, is_content=False,)
+analysis.test(trade_day_delay=trade_day_delay, to_pickle=True)
 my_data = pd.read_pickle(filename)
+
+
+def y_for_jun():
+    if grain == 'CORN':
+        return Corn
+    elif grain == 'SOYBEAN':
+        return Soybean
+    elif grain == 'WHEAT':
+        return Wheat
+    elif grain == 'RICE':
+        return Rice
+    elif grain == 'OAT':
+        return Oats
+    else:
+        raise NotImplementedError
+
+
+def y_for_me():
+    if grain == 'CORN':
+        return 'Price_US Corn'
+    elif grain == 'SOYBEAN':
+        return 'Price_US Soybeans'
+    elif grain == 'WHEAT':
+        return 'Price_US Wheat'
+    elif grain == 'RICE':
+        return 'Price_Rough Rice'
+    elif grain == 'OAT':
+        return 'Price_Oats'
+    else:
+        raise NotImplementedError
+
 
 if is_jun:
     X = price[test_name].shift(-trade_day_delay).dropna().to_numpy()
-    Y = Oats[0:-1]
+    Y = y_for_jun()[0:-1]
 else:
     temp = pd.merge(price, my_data, on='Date')
     X = temp[test_name].shift(-trade_day_delay).dropna().to_numpy()
-    Y = temp['Price_Oats'][0:-1]
+    Y = temp[y_for_me()][0:-1]
 
 predict_data, X_test, target, y_test = train_test_split(X, Y, test_size=0.4, random_state=540)
 
@@ -100,7 +132,7 @@ if is_jun:
                            title='regression with Lag1 Prices(with PCA)'))
 else:
     print(rs_pred.summary2(yname='Wheat price',
-                           xname=['constant', 'PC1', 'PC2', 'PC3', 'PC4', 'PC5', 'PC6', 'PC7', 'PC8','PC9','PC10'],
+                           xname=['constant', 'PC1', 'PC2', 'PC3', 'PC4', 'PC5', 'PC6', 'PC7', 'PC8', 'PC9', 'PC10'],
                            alpha=0.05,
                            title='regression with Lag1 Prices(with PCA)'))
 

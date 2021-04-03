@@ -90,7 +90,7 @@ num_filters = 100
 kernel_sizes = [3, 4, 5]
 net = SentimentCNN(w2v, vocab_size, output_size, embedding_dim, num_filters, kernel_sizes)
 
-grain = 'CORN'
+grain = 'WHEAT'
 print(grain)
 experiment = MyExperiment(grain)
 df = experiment.combined_df

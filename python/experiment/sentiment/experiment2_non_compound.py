@@ -1,3 +1,3 @@
-from python.experiment.sentiment import default_test, SentimentAnalysis
+from python.experiment.sentiment import default_test, SentimentAnalysis, VaderSentimentScoring
 
-default_test(SentimentAnalysis, ['negative', 'positive', 'neutral'])
+default_test(SentimentAnalysis, VaderSentimentScoring, ['negative', 'positive', 'neutral'], is_content=False)

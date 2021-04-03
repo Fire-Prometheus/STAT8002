@@ -118,10 +118,12 @@ class SentimentAnalysis(Experiment):
     grain: str
     sentiment_scoring: SentimentScoring
 
-    def __init__(self, sentiment_scoring: SentimentScoring, grain: str, all_data: bool = False) -> None:
+    def __init__(self, sentiment_scoring: SentimentScoring, grain: str, is_content: bool,
+                 all_data: bool = False) -> None:
         self.sentiment_scoring = sentiment_scoring
         self.grain = grain
-        super().__init__(grain, all_data)
+        self.is_content = is_content
+        super().__init__(grain=grain, all_data=all_data)
 
     @staticmethod
     def __preprocess(words: List[str]) -> List[str]:
@@ -133,7 +135,8 @@ class SentimentAnalysis(Experiment):
     def _process_news(self):
         self.news = pd.merge(
             self.news,
-            self.news['new content'].apply(lambda c: self.sentiment_scoring.compute_scores(c)),
+            (self.news['new content'] if self.is_content else self.news['new headline']).apply(
+                lambda c: self.sentiment_scoring.compute_scores(c)),
             left_index=True,
             right_index=True
         )
@@ -191,8 +194,10 @@ class SentimentAnalysis(Experiment):
         svc = svm.SVC()
         svc.fit(x_train, y_train)
         score = svc.score(x_test, y_test)
+        # data['predicted_next_trade_day_direction_by_headline'] = svc.predict(x)
         print(str(trade_day_delay) + " day(s) delay")
         print(score)
+        # data.to_pickle('../../data/data_'+self.grain+'_headline_output.pickle')
         if to_pickle:
             data.to_pickle('./data_' + self.grain + '_delay' + str(trade_day_delay) + '.pickle')
 
@@ -222,15 +227,15 @@ class SentimentAnalysis(Experiment):
 
 
 class ExtendedSentimentAnalysis(SentimentAnalysis):
-    def __init__(self, sentiment_scoring: SentimentScoring, grain: str) -> None:
-        super().__init__(sentiment_scoring, grain, True)
+    def __init__(self, sentiment_scoring: SentimentScoring, grain: str, is_content: bool) -> None:
+        super().__init__(sentiment_scoring, grain, is_content=is_content, all_data=True)
 
 
-def default_test(cls: type, sentiment_scoring_cls: type, columns: List[str] = None):
+def default_test(cls: type, sentiment_scoring_cls: type, columns: List[str] = None, is_content: bool = True):
     for grain in GRAINS:
         print('====================')
         print(grain)
-        sentiment_analysis = cls(sentiment_scoring_cls(), grain)
+        sentiment_analysis = cls(sentiment_scoring=sentiment_scoring_cls(), grain=grain, is_content=is_content)
         for delay in DELAY:
             sentiment_analysis.test(columns=columns, trade_day_delay=delay, to_pickle=True)
         print()

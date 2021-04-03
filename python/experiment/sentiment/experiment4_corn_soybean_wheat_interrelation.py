@@ -5,7 +5,7 @@ from sklearn import svm
 from sklearn.model_selection import train_test_split
 
 from python.experiment import DELAY
-from python.experiment.sentiment import SentimentAnalysis
+from python.experiment.sentiment import SentimentAnalysis, VaderSentimentScoring
 
 
 class AdvancedSentimentAnalysis:
@@ -13,9 +13,9 @@ class AdvancedSentimentAnalysis:
 
     def __init__(self) -> None:
         self.sentiment_analysis_list = [
-            SentimentAnalysis('CORN'),
-            SentimentAnalysis('SOYBEAN'),
-            SentimentAnalysis('WHEAT')
+            SentimentAnalysis(VaderSentimentScoring(), 'CORN'),
+            SentimentAnalysis(VaderSentimentScoring(), 'SOYBEAN'),
+            SentimentAnalysis(VaderSentimentScoring(), 'WHEAT')
         ]
         for sa in self.sentiment_analysis_list:
             self.__process_sentiment_analysis(sa)
