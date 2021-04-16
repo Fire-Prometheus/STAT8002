@@ -1,3 +1,4 @@
+import sys
 from typing import Dict, List, Union, Iterable, Tuple, Optional
 
 import nltk
@@ -13,8 +14,60 @@ from sklearn.svm import SVR
 
 from python.experiment import Experiment, DELAY
 from python.preprocessing import GRAINS
+import random
 
 SCORE_COLUMNS = ['positive', 'negative', 'neutral', 'compound']
+RANDOM_STATES = [16462643,
+                 16420919,
+                 12815786,
+                 807484,
+                 13344684,
+                 14712439,
+                 10114233,
+                 11900286,
+                 18321740,
+                 1363,
+                 2435817,
+                 13546790,
+                 8046657,
+                 6378799,
+                 15903029,
+                 1224393,
+                 9197436,
+                 4207558,
+                 5568659,
+                 7313801,
+                 1661057,
+                 7175454,
+                 5958119,
+                 149707,
+                 5082008,
+                 8883810,
+                 9972230,
+                 15722841,
+                 12603123,
+                 7245555,
+                 3707589,
+                 4854218,
+                 13559325,
+                 6081105,
+                 6101872,
+                 13186329,
+                 15956992,
+                 16804426,
+                 3087363,
+                 5971115,
+                 1513588,
+                 4136885,
+                 957889,
+                 3022850,
+                 12737466,
+                 1708995,
+                 7619632,
+                 16307329,
+                 3942301,
+                 3516928
+                 ]
 
 analyzer = SentimentIntensityAnalyzer()
 mean = np.mean
@@ -123,7 +176,7 @@ class SentimentAnalysis(Experiment):
         self.sentiment_scoring = sentiment_scoring
         self.grain = grain
         self.is_content = is_content
-        super().__init__(grain=grain, all_data=all_data)
+        super().__init__(grain=grain, all_data=all_data, is_content=is_content)
 
     @staticmethod
     def __preprocess(words: List[str]) -> List[str]:
@@ -183,23 +236,36 @@ class SentimentAnalysis(Experiment):
         result = result[result['direction'].notna()]
         return result
 
-    def test(self, columns: List[str] = None, trade_day_delay: int = 0, to_pickle: bool = False) -> None:
+    def test(self, columns: List[str] = None, trade_day_delay: int = 0, to_pickle: bool = False,
+             random_state=42) -> None:
+        data, scores = self.core_test(columns, trade_day_delay, random_state)
+        # data['predicted_next_trade_day_direction_by_headline'] = svc.predict(x)
+        print(str(trade_day_delay) + " day(s) delay")
+        print(scores[0])
+        # data.to_pickle('../../data/data_'+self.grain+'_headline_output.pickle')
+        if to_pickle:
+            data.to_pickle('./data_' + self.grain + '_delay' + str(trade_day_delay) + '.pickle')
+
+    def core_test(self, columns, trade_day_delay: int, random_state: int = None, test_size: int = 1) -> (
+            pd.DataFrame, List[float]):
         if columns is None:
             columns = ['negative', 'positive']
         data = self.apply_delay(trade_day_delay)
         data = data[data['positive'].notna()]
         x = data[columns]
         y = data['direction']
-        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.33, random_state=42)
-        svc = svm.SVC()
-        svc.fit(x_train, y_train)
-        score = svc.score(x_test, y_test)
-        # data['predicted_next_trade_day_direction_by_headline'] = svc.predict(x)
-        print(str(trade_day_delay) + " day(s) delay")
-        print(score)
-        # data.to_pickle('../../data/data_'+self.grain+'_headline_output.pickle')
-        if to_pickle:
-            data.to_pickle('./data_' + self.grain + '_delay' + str(trade_day_delay) + '.pickle')
+        scores: List[float] = []
+        for i in RANDOM_STATES:
+            x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.33, random_state=i)
+            svc = svm.SVC()
+            svc.fit(x_train, y_train)
+            scores.append(svc.score(x_test, y_test))
+        return data, scores
+
+    def generate_samples(self, columns: List[str] = None, trade_day_delay: int = 1,
+                         sample_size: int = 50) -> List[float]:
+        data, scores = self.core_test(columns, trade_day_delay, test_size=sample_size)
+        return scores
 
     def fit_linear(self, columns: List[str] = None, trade_day_delay: int = 0) -> None:
         if columns is None:
@@ -239,3 +305,29 @@ def default_test(cls: type, sentiment_scoring_cls: type, columns: List[str] = No
         for delay in DELAY:
             sentiment_analysis.test(columns=columns, trade_day_delay=delay, to_pickle=True)
         print()
+
+
+def generate_samples(cls: type, sentiment_scoring_cls: type, columns: List[str] = None,
+                     is_content: bool = True, delays=None, sample_size: int = 50,
+                     file_path: str = None) -> pd.DataFrame:
+    df: pd.DataFrame = pd.DataFrame()
+    if delays is None:
+        delays = [0, 1, 2, 3, 5, 7, 14, 30]
+    sub_result = dict()
+    for grain in GRAINS:
+        print('====================')
+        print(grain)
+        sentiment_analysis = cls(sentiment_scoring=sentiment_scoring_cls(), grain=grain, is_content=is_content)
+        for delay in delays:
+            temp_result = sentiment_analysis.generate_samples(columns=columns, trade_day_delay=delay,
+                                                              sample_size=sample_size)
+            temp_df = pd.DataFrame({'ACCURACY': temp_result})
+            temp_df['GRAIN'] = grain
+            temp_df['DELAY'] = delay
+            temp_df['TEXT'] = 'Content' if is_content else 'Headline'
+            df = pd.concat([df, temp_df])
+            sub_result[grain] = temp_result
+    if file_path is not None:
+        df_by_grain = pd.DataFrame(sub_result)
+        df_by_grain.to_csv(file_path, index=False)
+    return df

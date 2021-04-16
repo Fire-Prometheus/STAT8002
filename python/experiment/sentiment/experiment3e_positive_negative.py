@@ -1,14 +1,12 @@
-import pandas as pd
+import os
+
 import numpy as np
+import pandas as pd
+import statsmodels.api as sm
 from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
-import statsmodels.api as sm
-import matplotlib.pyplot as plt
-import scipy.stats as stats
-import os
-from os import path
+from sklearn.preprocessing import StandardScaler
 
 from python.experiment.sentiment import SentimentAnalysis, VaderSentimentScoring
 
@@ -64,7 +62,7 @@ Cattle = np.array(price['Price_Live Cattle'])
 Oil = np.array(price['Price_Crude Oil WTI'])
 Pig = np.array(price['Price_Lean Hogs'])
 
-grain = 'WHEAT'
+grain = 'OAT'
 trade_day_delay = 1
 is_jun = False
 

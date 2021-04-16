@@ -146,7 +146,7 @@ PICKLE = {
 for key, value in PICKLE.items():
     for grain in GRAINS:
         value[grain] = '../data/preprocessed_' + key.lower() + '_' + grain.lower() + '.pickle'
-PICKLE['NEWS']['ALL'] = '../data/preprocessed_all_new_tags_content.pickle'
+PICKLE['NEWS']['ALL'] = '../data/preprocessed_all_new_tags.pickle'
 
 
 class AdvancedNewsDataPreprocessor(NewsDataPreprocessor):
