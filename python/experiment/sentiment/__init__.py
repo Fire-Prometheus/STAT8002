@@ -1,4 +1,5 @@
 import sys
+import math
 from typing import Dict, List, Union, Iterable, Tuple, Optional
 
 import nltk
@@ -251,7 +252,7 @@ class SentimentAnalysis(Experiment):
         if columns is None:
             columns = ['negative', 'positive']
         data = self.apply_delay(trade_day_delay)
-        data = data[data['positive'].notna()]
+        data = data[data['positive'].swifter.apply(lambda e:not(math.isnan(e)))]
         x = data[columns]
         y = data['direction']
         scores: List[float] = []

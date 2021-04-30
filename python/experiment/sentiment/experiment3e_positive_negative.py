@@ -62,7 +62,7 @@ Cattle = np.array(price['Price_Live Cattle'])
 Oil = np.array(price['Price_Crude Oil WTI'])
 Pig = np.array(price['Price_Lean Hogs'])
 
-grain = 'OAT'
+grain = 'CORN'
 trade_day_delay = 1
 is_jun = False
 

@@ -162,34 +162,36 @@ def train(net, train_loader, epochs, print_every=100):
         # batch loop
         for inputs1, labels1 in train_loader:
             counter += 1
+            try:
+                # zero accumulated gradients
+                net.zero_grad()
 
-            # zero accumulated gradients
-            net.zero_grad()
+                # get the output from the model
+                output1 = net(inputs1)
 
-            # get the output from the model
-            output1 = net(inputs1)
+                # calculate the loss and perform backprop
 
-            # calculate the loss and perform backprop
+                loss = criterion(output1.squeeze(), labels1.long())
+                optimizer.step()
 
-            loss = criterion(output1.squeeze(), labels1.long())
-            optimizer.step()
+                # loss stats
+                if counter % print_every == 0:
+                    # Get validation loss
+                    val_losses = []
+                    net.eval()
+                    for i, l in loader_valid:
+                        o = net(i)
+                        val_loss = criterion(o.squeeze(), l.long())
 
-            # loss stats
-            if counter % print_every == 0:
-                # Get validation loss
-                val_losses = []
-                net.eval()
-                for i, l in loader_valid:
-                    o = net(i)
-                    val_loss = criterion(o.squeeze(), l.long())
+                        val_losses.append(val_loss.item())
 
-                    val_losses.append(val_loss.item())
-
-                net.train()
-                print("Epoch: {}/{}...".format(e + 1, epochs),
-                      "Step: {}...".format(counter),
-                      "Loss: {:.6f}...".format(loss.item()),
-                      "Val Loss: {:.6f}".format(np.mean(val_losses)))
+                    net.train()
+                    print("Epoch: {}/{}...".format(e + 1, epochs),
+                          "Step: {}...".format(counter),
+                          "Loss: {:.6f}...".format(loss.item()),
+                          "Val Loss: {:.6f}".format(np.mean(val_losses)))
+            except:
+                continue
 
 
 epochs = 10  # this is approx where I noticed the validation loss stop decreasing
